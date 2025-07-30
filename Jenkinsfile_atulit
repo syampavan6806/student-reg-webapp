@@ -1,0 +1,116 @@
+pipeline{
+    agent any
+    
+    tools {
+  maven 'Maven-3.9.10'
+ }
+     
+     triggers {
+  githubPush()
+}
+
+options {
+  buildDiscarder logRotator(numToKeepStr: '5')
+  disableConcurrentBuilds()
+  timeout(10)
+  timestamps()
+}
+
+
+     
+     environment {
+  SONARQUBE_URL = "http://172.31.33.13:9000/"
+  SONARQUBE_TOKEN = credentials('sonarqube_token') //user either one type for sonarqube token
+  // SONARQUBE_TOKEN = "sonarqube_token"
+  USER = "ec2-user"
+  TOMCAT_SERVER_IP = "172.31.12.186"
+}
+
+     
+    stages{
+        stage('git checkoutcode'){
+            steps{
+                git branch: 'development', credentialsId: 'GitHub_Pwd', url: 'https://github.com/syampavan6806/student-reg-webapp.git'
+            }
+        }
+        
+        stage('build'){
+            steps{
+                sh "mvn clean package"
+            }
+        }
+        stage('sonar scan'){
+            steps{
+                sh "mvn sonar:sonar -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.token=${SONARQUBE_TOKEN}"
+          }
+            }
+    /*
+           stage('sonar scan'){           //use either one for sonarqube stage
+            steps{
+                withCredentials([string(credentialsId: 'sonarqube_token', variable: 'sonarqube_token')]) {
+                sh "mvn sonar:sonar -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.token=${SONARQUBE_TOKEN}"
+          }
+              
+            }
+        }
+   */
+        
+        stage('upload artifcats to nexus'){
+            steps{
+            sh "mvn clean deploy"
+            }
+        }
+
+      
+                stage("Deploy to dev server"){
+                when{
+                   expression{
+                     return env.BRANCH_NAME == 'development'
+                 }
+             }
+            steps{
+                sshagent(['Tomcat_ssh_privatekey']) {
+                 sh """
+                 echo stopping the tomcatserver
+                 ssh -o StrictHostKeyChecking=no  ${USER}@${TOMCAT_SERVER_IP} sudo systemctl stop tomcat
+                 sleep 30
+                 echo copying war file to tomcatserver
+                 scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${USER}@${TOMCAT_SERVER_IP}:/opt/tomcat/webapps/student-reg-webapp.war
+                 echo starting the tomcatserver
+                 ssh -o StrictHostKeyChecking=no  ${USER}@${TOMCAT_SERVER_IP} sudo systemctl start tomcat
+                 """
+              }
+            }
+           }
+
+    }//stages closing
+     post {
+  always {
+    cleanWs()
+  }
+  success {
+    slackSend(channel: 'team-devops', color: 'good', message: "Build - SUCCESS : ${env.JOB_NAME}#${env.BUILD_NUMBER} - URL: ${env.BUILD_URL}")
+    sendEmail(
+        "${env.JOB_NAME} - ${env.BUILD_NUMBER} - BUILD SUCCESS",
+        "Build SUCEESS please check the console output at ${env.BUILD_URL}",
+        'pavankumar6806@gmail.com'
+    )
+  }
+  failure {
+        slackSend(channel: 'team-devops', color: 'danger', message: "Build - FAILED : ${env.JOB_NAME}#${env.BUILD_NUMBER} - URL: ${env.BUILD_URL}")
+    sendEmail(
+        "${env.JOB_NAME} - ${env.BUILD_NUMBER} - BUILD FAILED",
+        "Build FAILED please check the console output at ${env.BUILD_URL}",
+        'pavankumar6806@gmail.com'
+    )
+  }
+}//post closing
+}//pipeline closing
+def sendEmail(String subject,String body,String recipient) {
+    emailext(
+        subject: subject,
+        body: body,
+        to: recipient,
+        mimeType: 'text/html'
+    )
+}
