@@ -60,37 +60,29 @@ options {
             sh "mvn clean deploy"
             }
         }
-                stage("stopping the tomcatserver"){
+
+      
+                stage("Deploy to dev server"){
+                when{
+                   expression{
+                     return env.BRANCH_NAME == 'development'
+                 }
+             }
             steps{
                 sshagent(['Tomcat_ssh_privatekey']) {
                  sh """
                  echo stopping the tomcatserver
                  ssh -o StrictHostKeyChecking=no  ${USER}@${TOMCAT_SERVER_IP} sudo systemctl stop tomcat
                  sleep 30
-                 """
-              }
-            }
-           }
-        stage("deploy war to tomcatserver"){
-            steps{
-                sshagent(['Tomcat_ssh_privatekey']) {
-                 sh """
                  echo copying war file to tomcatserver
                  scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${USER}@${TOMCAT_SERVER_IP}:/opt/tomcat/webapps/student-reg-webapp.war
-                 """
-              }
-            }
-        }
-       stage("starting the tomcatserver"){
-            steps{
-                sshagent(['Tomcat_ssh_privatekey']) {
-                 sh """
                  echo starting the tomcatserver
                  ssh -o StrictHostKeyChecking=no  ${USER}@${TOMCAT_SERVER_IP} sudo systemctl start tomcat
                  """
               }
             }
            }
+
     }//stages closing
      post {
   always {
