@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: studentregwebapp
-        image: dockersyampawan/student-web-app:v1.5
+        image: dockersyampawan/student-web-app:v3.0
         ports:
         - containerPort: 8080
         resources:
