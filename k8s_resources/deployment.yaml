@@ -4,7 +4,6 @@ metadata:
   name: student-reg-webapp
   namespace: test-ns
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: student-reg-webapp
