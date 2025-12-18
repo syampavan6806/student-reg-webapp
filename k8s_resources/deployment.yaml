@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: studentregwebapp
-        image: 268428819789.dkr.ecr.ap-south-1.amazonaws.com/student-web-app:19
+        image: 268428819789.dkr.ecr.ap-south-1.amazonaws.com/student-web-app:20
         ports:
         - containerPort: 8080
         resources:
