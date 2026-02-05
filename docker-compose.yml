@@ -1,6 +1,6 @@
 services:
   student-reg-webapp:
-    image: dockersyampawan/student-reg-webapp-private:IMAGE_TAG
+    image: dockersyampawan/student-reg-webapp-private:1
     ports:
      - "9090:8080"
     deploy:
