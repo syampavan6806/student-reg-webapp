@@ -1,0 +1,15 @@
+services:
+  student-reg-webapp:
+    image: dockersyampawan/student-reg-webapp-private:IMAGE_TAG
+    ports:
+     - "9090:8080"
+    deploy:
+      mode: replicated
+      replicas: 2 
+      placement:
+        constraints: [node.role == worker] 
+    networks:
+      - student-reg-webapp-overlay
+networks:
+  student-reg-webapp-overlay:
+    driver: overlay
